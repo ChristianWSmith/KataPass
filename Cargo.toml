@@ -1,0 +1,10 @@
+[package]
+name = "katapass"
+version = "0.1.0"
+edition = "2021"
+author = "Christian Smith"
+
+[dependencies]
+configparser = "3.0.1"
+fixed-vec-deque = "0.1.9"
+lazy_static = "1.4.0"
