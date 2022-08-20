@@ -12,5 +12,6 @@ KataPass config file must include 3 fields under the ```[katapass]``` section:
 3. intercept: The GTP genmove or equivalent command you wish to intercept.  This command must satisfy the following criteria:
     * It must take a 'B' or 'W' as its second argument.
     * It must report a numeric winrate between 0.0 and 1.0 after the word 'winrate' in its output.
+4. threshold: A decimal number between 0.0 and 1.0 representing the win rate which the engine will pass down no lower than.
     
 Paths in the config file may not include spaces, sorry.

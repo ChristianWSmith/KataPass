@@ -7,7 +7,21 @@ const CONFIG_SECTION: &str = "KATAPASS";
 const CONFIG_ENGINE_PATH: &str = "ENGINE";
 const CONFIG_ENGINE_ARGS: &str = "ARGS";
 const CONFIG_INTERCEPT: &str = "INTERCEPT";
-const CONFIG_FIELDS: [&str; 3] = [CONFIG_ENGINE_PATH, CONFIG_ENGINE_ARGS, CONFIG_INTERCEPT];
+const CONFIG_THRESHOLD: &str = "THRESHOLD";
+const CONFIG_FIELDS: [&str; 4] = [
+    CONFIG_ENGINE_PATH,
+    CONFIG_ENGINE_ARGS,
+    CONFIG_INTERCEPT,
+    CONFIG_THRESHOLD,
+];
+
+#[derive(Default)]
+struct KataPassConfig {
+    engine_path: String,
+    engine_args: String,
+    intercept_command: String,
+    winrate_threshold: f64,
+}
 
 const BLACK: &str = "B";
 const WHITE: &str = "W";
@@ -23,9 +37,8 @@ const PASS_COMMAND_PREFIX: &str = "play ";
 const PASS_COMMAND_SUFFIX: &str = " pass\n";
 
 lazy_static! {
-    static ref KATAPASS_CONFIG: std::collections::HashMap<String, String> = {
-        let mut katapass_config: std::collections::HashMap<String, String> =
-            std::collections::HashMap::new();
+    static ref KATAPASS_CONFIG: KataPassConfig = {
+        let mut katapass_config: KataPassConfig = Default::default();
         let mut katapass_args: std::env::Args = std::env::args();
         let mut config_file: configparser::ini::Ini = configparser::ini::Ini::new();
         katapass_args.next().expect("No KataPass executable?");
@@ -39,7 +52,17 @@ lazy_static! {
             let value: String = config_file
                 .get(CONFIG_SECTION, config_field)
                 .expect(&format!("Field missing from config: {}", config_field)[..]);
-            katapass_config.insert(config_field.to_string(), value);
+            match config_field {
+                CONFIG_ENGINE_PATH => katapass_config.engine_path = value,
+                CONFIG_ENGINE_ARGS => katapass_config.engine_args = value,
+                CONFIG_INTERCEPT => katapass_config.intercept_command = value,
+                CONFIG_THRESHOLD => {
+                    katapass_config.winrate_threshold = value[..]
+                        .parse::<f64>()
+                        .expect("Failed to parse threshold in config.")
+                }
+                _ => unreachable!("Matched a config field that is unrecognized."),
+            }
         }
         katapass_config
     };
@@ -167,12 +190,12 @@ fn spawn_engine_process() -> (
     std::process::ChildStderr,
 ) {
     let mut engine_command: std::process::Command =
-        std::process::Command::new(&KATAPASS_CONFIG[CONFIG_ENGINE_PATH].clone());
+        std::process::Command::new(KATAPASS_CONFIG.engine_path.clone());
     engine_command
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped());
-    for engine_arg in KATAPASS_CONFIG[CONFIG_ENGINE_ARGS][..].split(' ') {
+    for engine_arg in KATAPASS_CONFIG.engine_args.split(' ') {
         engine_command.arg(engine_arg);
     }
     let mut engine_process: std::process::Child = engine_command
@@ -202,7 +225,7 @@ fn spawn_engine_broker_thread(
         let mut input_buffer: String;
         loop {
             input_buffer = read_katapass_stdin();
-            if input_buffer.starts_with(&KATAPASS_CONFIG[CONFIG_INTERCEPT][..]) {
+            if input_buffer.starts_with(&KATAPASS_CONFIG.intercept_command) {
                 write_katapass_stderr(KATAPASS_CONSIDERING.to_string());
                 let (winrate, pass_command) =
                     process_intercept(input_buffer.clone(), &mut engine_stdin, &engine_response_rx);
