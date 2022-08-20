@@ -229,7 +229,7 @@ fn spawn_engine_broker_thread(
                 write_katapass_stderr(KATAPASS_CONSIDERING.to_string());
                 let (winrate, pass_command) =
                     process_intercept(input_buffer.clone(), &mut engine_stdin, &engine_response_rx);
-                if winrate >= 0.5f64 {
+                if winrate >= KATAPASS_CONFIG.winrate_threshold {
                     write_katapass_stderr(KATAPASS_PASS.to_string());
                     input_buffer = pass_command;
                     write_katapass_stdout(PASS_OUTPUT.to_string());
